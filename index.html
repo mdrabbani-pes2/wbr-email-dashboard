@@ -210,9 +210,8 @@ function barPillPlugin(actualData, planData, fmtFn) {
         const val = actualData[i];
         if (val === null || val === undefined) return;
         const text = fmtFn(val);
-        const barTop = y.getPixelForValue(val);
-        let cy = barTop - 14;
-        if (cy - 10 < ca.top) cy = barTop + 16;
+        const barBottom = y.getPixelForValue(0);
+        const cy = barBottom - 12;
         placed.push({ cx: bar.x, cy });
         drawPillFixed(ctx, text, bar.x, cy, '#222222', '#222222', '#ffffff', ca);
       });
