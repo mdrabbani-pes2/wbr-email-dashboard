@@ -86,7 +86,13 @@
 // CONFIG
 // ─────────────────────────────────────────────────────────
 const SHEET_ID = '1V42IY30Dt2tBgBhmxHW6ZapNa1r0xXJN4COX5smHtvk';
-const SHEETS = { wow: 'WoW_Data', mom: 'MoM_Data', cohort: 'Cohort_Data' };
+const SHEETS = {
+  wow:       'WoW_Data',
+  mom:       'MoM_Data',
+  cohort:    'Agency_Cohort_Data',
+  churn:     'Churn_Data',
+  locCohort: 'Location_Cohort_Data'
+};
 
 // ─────────────────────────────────────────────────────────
 // FETCH SHEET DATA
@@ -275,8 +281,9 @@ async function loadAllData() {
   document.getElementById('mainContent').innerHTML = '<div class="loading">⏳ Fetching latest data from Google Sheet...</div>';
   
   try {
-    const [wowRaw, momRaw, cohortRaw] = await Promise.all([
-      fetchSheet(SHEETS.wow), fetchSheet(SHEETS.mom), fetchSheet(SHEETS.cohort)
+    const [wowRaw, momRaw, cohortRaw, churnRaw, locCohortRaw] = await Promise.all([
+      fetchSheet(SHEETS.wow), fetchSheet(SHEETS.mom), fetchSheet(SHEETS.cohort),
+      fetchSheet(SHEETS.churn), fetchSheet(SHEETS.locCohort)
     ]);
 
     // Parse WoW
@@ -306,12 +313,25 @@ async function loadAllData() {
     const ipMrr26 = momSeries(rows26, 12);
     const arpa25 = momSeries(rows25, 16); const arpa26 = momSeries(rows26, 16);
     const tickets26 = momSeries(rows26, 13);
+    const newLoc25 = momSeries(rows25, 15); const newLoc26 = momSeries(rows26, 15);
+    const churnAg25 = momSeries(rows25, 17); const churnAg26 = momSeries(rows26, 17);
 
-    // Parse Cohort
-    const cohortRows = cohortRaw.slice(1).filter(r => r[0] && r[0].trim());
+    // Parse Churn % (Churn_Data tab)
+    const churnRows = churnRaw.slice(1).filter(r => r[0] && !r[0].includes('ADD NEW') && !r[0].includes('HOW TO') && r[2]);
+    const churnLabels = churnRows.map(r => r[0].trim().slice(0,3) + '-' + String(r[1]).trim().slice(2));
+    const churnData = churnRows.map(r => num(r[2]));
+
+    // Parse Cohort (Agency_Cohort_Data tab)
+    const cohortRows = cohortRaw.slice(1).filter(r => r[0] && r[0].trim() && !r[0].includes('ADD NEW'));
     const cohortVals = cohortRows.map(r => ({ label: r[0], ag: r[1], vals: r.slice(2).map(v => num(v)) }));
     const allCohortNums = cohortVals.flatMap(c => c.vals.filter(v => v !== null));
     const cMin = Math.min(...allCohortNums), cMax = Math.max(...allCohortNums);
+
+    // Parse Location Cohort (Location_Cohort_Data tab)
+    const locCohortRows = locCohortRaw.slice(1).filter(r => r[0] && r[0].trim() && !r[0].includes('ADD NEW') && !r[0].includes('HOW TO'));
+    const locCohortVals = locCohortRows.map(r => ({ label: r[0], ag: r[1], vals: r.slice(2).map(v => num(v)) }));
+    const allLocNums = locCohortVals.flatMap(c => c.vals.filter(v => v !== null));
+    const lcMin = Math.min(...allLocNums), lcMax = Math.max(...allLocNums);
 
     // Latest values for KPIs
     const latestMom26 = rows26[rows26.length - 1];
@@ -434,19 +454,46 @@ async function loadAllData() {
         </div>
       </div>
 
-      <!-- ARPA -->
-      <div class="chart-grid-2">
-        <div class="chart-card">
-          <div class="legend-row"><span><span class="legend-dot" style="background:#4a90d9"></span>2025</span><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
-          <div class="chart-title">Email ARPA — MoM</div>
-          <div class="chart-subtitle">Average Revenue per Agency ($)</div>
-          <div class="chart-wrap"><canvas id="arpaChart"></canvas></div>
-        </div>
+      <!-- ARPA removed — now in Locations section -->
+      <div class="chart-grid-1">
         <div class="chart-card">
           <div class="legend-row"><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
           <div class="chart-title">Support Tickets — YoY Trend</div>
           <div class="chart-subtitle">Monthly ticket count</div>
           <div class="chart-wrap"><canvas id="momTicketsChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Churn Section -->
+      <div class="section-title">📉 Churn &amp; Retention</div>
+      <div class="chart-grid-2">
+        <div class="chart-card">
+          <div class="chart-title">Email System Churn (%) — MoM Trend</div>
+          <div class="chart-subtitle">Monthly churn rate · Oct 2025 – May 2026</div>
+          <div class="chart-wrap"><canvas id="churnPctChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="legend-row"><span><span class="legend-dot" style="background:#4a90d9"></span>2025</span><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
+          <div class="chart-title">Email Churn Agencies — Moved out of LC</div>
+          <div class="chart-subtitle">Companies churned per month · Jan 2025 – May 2026</div>
+          <div class="chart-wrap"><canvas id="churnAgenciesChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- New Locations Section -->
+      <div class="section-title">📍 Growth &amp; Locations</div>
+      <div class="chart-grid-2">
+        <div class="chart-card">
+          <div class="legend-row"><span><span class="legend-dot" style="background:#4a90d9"></span>2025</span><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
+          <div class="chart-title">New Locations Activated — YoY Trend</div>
+          <div class="chart-subtitle">Monthly new locations · 2025 vs 2026</div>
+          <div class="chart-wrap"><canvas id="newLocChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="legend-row"><span><span class="legend-dot" style="background:#4a90d9"></span>2025</span><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
+          <div class="chart-title">Email ARPA — MoM YoY</div>
+          <div class="chart-subtitle">Average Revenue per Agency ($)</div>
+          <div class="chart-wrap"><canvas id="arpaChart"></canvas></div>
         </div>
       </div>
 
@@ -464,6 +511,22 @@ async function loadAllData() {
           <div class="cs-card"><div class="cs-lbl">Strongest M0 cohort</div><div class="cs-val">May 2026</div><div class="cs-sub">M0 = 93.07%</div></div>
           <div class="cs-card"><div class="cs-lbl">Peak activation (M11)</div><div class="cs-val">${cMax.toFixed(2)}%</div><div class="cs-sub">Jul 2025 cohort</div></div>
           <div class="cs-card"><div class="cs-lbl">Total agencies (all cohorts)</div><div class="cs-val">316.1K</div><div class="cs-sub">Jul 2025 – Jun 2026</div></div>
+        </div>
+      </div>
+
+      <!-- New Locations Cohort -->
+      <div class="cohort-wrap">
+        <div class="chart-title">New Locations — Email Activation by Cohort</div>
+        <div class="chart-subtitle">Cumulative emails per location (%), by cohort age (M0 = signup month)</div>
+        <table class="cohort-table" id="locCohortTable"></table>
+        <div class="legend-bar-wrap">
+          <div class="legend-bar" style="background:linear-gradient(to right,#cfe0f2,#1a3a6b)"></div>
+          <div class="legend-bar-labels"><span>12.0%</span><span>24.5%</span><span>37.0%</span></div>
+        </div>
+        <div class="cohort-summary">
+          <div class="cs-card"><div class="cs-lbl">Strongest M0 cohort</div><div class="cs-val">May 2026</div><div class="cs-sub">M0 = 31.52%</div></div>
+          <div class="cs-card"><div class="cs-lbl">Peak activation (M11)</div><div class="cs-val">36.51%</div><div class="cs-sub">Jul 2025 cohort</div></div>
+          <div class="cs-card"><div class="cs-lbl">Total locations (all cohorts)</div><div class="cs-val">1.92M</div><div class="cs-sub">Jul 2025 – Jun 2026</div></div>
         </div>
       </div>
       `;
@@ -526,6 +589,15 @@ async function loadAllData() {
       // ── ARPA ──
       new Chart('arpaChart', { type:'line', data:{ labels:momLabels, datasets:makeYoYDatasets(arpa25,arpa26) }, options:{ ...baseLineOpts('ARPA ($)',7,12,1,v=>'$'+v.toFixed(0)), plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': $'+c.parsed.y.toFixed(1)}}} }, plugins:[makePillPlugin([{data:arpa25,pillBorder:'#4a90d9',pillText:'#1a5fa8',pillFmt:v=>'$'+v.toFixed(1)},{data:arpa26,pillBorder:'#e05a5a',pillText:'#c03030',pillFmt:v=>'$'+v.toFixed(1)}])] });
 
+      // ── CHURN % MoM — from Churn_Data sheet ──
+      new Chart('churnPctChart', { type:'line', data:{ labels:churnLabels, datasets:[{ label:'Churn %', data:churnData, borderColor:'#4a90d9', borderWidth:2, borderDash:[6,4], pointBackgroundColor:'#4a90d9', pointRadius:5, tension:0.4, fill:false }] }, options:{ ...baseLineOpts('Churn %',0.02,0.11,0.01,v=>v.toFixed(2)+'%'), plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}}} }, plugins:[makePillPlugin([{data:churnData,pillBorder:'#4a90d9',pillText:'#1a5fa8',pillFmt:v=>v.toFixed(2)+'%'}])] });
+
+      // ── CHURN AGENCIES YoY — from MoM_Data col 18 ──
+      new Chart('churnAgenciesChart', { type:'line', data:{ labels:momLabels, datasets:makeYoYDatasets(churnAg25,churnAg26) }, options:{ ...baseLineOpts('Companies churned',15,95,10,v=>v), plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+Math.round(c.parsed.y)}}} }, plugins:[makePillPlugin([{data:churnAg25,pillBorder:'#4a90d9',pillText:'#1a5fa8',pillFmt:v=>String(Math.round(v))},{data:churnAg26,pillBorder:'#e05a5a',pillText:'#c03030',pillFmt:v=>String(Math.round(v))}])] });
+
+      // ── NEW LOCATIONS YoY — from MoM_Data col 16 ──
+      new Chart('newLocChart', { type:'line', data:{ labels:momLabels, datasets:makeYoYDatasets(newLoc25.map(v=>v?v/1000:null),newLoc26.map(v=>v?v/1000:null)) }, options:{ ...baseLineOpts('New locations (K)',55,155,15,v=>v+'K'), plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(1)+'K'}}} }, plugins:[makePillPlugin([{data:newLoc25.map(v=>v?v/1000:null),pillBorder:'#4a90d9',pillText:'#1a5fa8',pillFmt:v=>v.toFixed(1)+'K'},{data:newLoc26.map(v=>v?v/1000:null),pillBorder:'#e05a5a',pillText:'#c03030',pillFmt:v=>v.toFixed(1)+'K'}])] });
+
       // ── COHORT TABLE ──
       const table = document.getElementById('cohortTable');
       const thead = document.createElement('thead');
@@ -548,6 +620,28 @@ async function loadAllData() {
         tbody.appendChild(tr);
       });
       table.appendChild(tbody);
+
+      // ── NEW LOCATIONS COHORT TABLE — from LocCohort_Data sheet ──
+      const locTable=document.getElementById('locCohortTable');
+      const locThead=document.createElement('thead'); const locHr=document.createElement('tr');
+      ['Cohort','Locations','M0','M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11'].forEach((h,i)=>{
+        const th=document.createElement('th'); th.textContent=h; if(i<=1)th.className='left'; locHr.appendChild(th);
+      });
+      locThead.appendChild(locHr); locTable.appendChild(locThead);
+      const locTbody=document.createElement('tbody');
+      locCohortVals.forEach(c=>{
+        const tr=document.createElement('tr');
+        const tl=document.createElement('td'); tl.className='lbl'; tl.textContent=c.label; tr.appendChild(tl);
+        const ta=document.createElement('td'); ta.className='ags'; ta.textContent=parseInt(c.ag).toLocaleString(); tr.appendChild(ta);
+        for(let m=0;m<12;m++){
+          const td=document.createElement('td'); const val=c.vals[m];
+          if(val===null||val===undefined){td.className='empty';}
+          else{td.style.background=cohortColor(val,lcMin,lcMax);td.style.color=cohortText(val,lcMin,lcMax);td.textContent=val.toFixed(2)+'%';}
+          tr.appendChild(td);
+        }
+        locTbody.appendChild(tr);
+      });
+      locTable.appendChild(locTbody);
     }
 
   } catch(e) {
