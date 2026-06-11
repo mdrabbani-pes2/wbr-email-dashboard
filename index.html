@@ -171,34 +171,56 @@ function drawPill(ctx, text, cx, cy, border, textColor) {
   ctx.restore();
 }
 
-function barPillPlugin(actualData, planData) {
+function drawPillFixed(ctx, text, cx, cy, pillBg, pillStroke, textColor, ca) {
+  ctx.save();
+  ctx.font = 'bold 9px Arial, sans-serif';
+  const tw = ctx.measureText(text).width;
+  const px = 5, py = 3, r = 5;
+  const pw = tw + px*2, ph = 9 + py*2;
+  if (cx - pw/2 < ca.left + 2) cx = ca.left + pw/2 + 2;
+  if (cx + pw/2 > ca.right - 2) cx = ca.right - pw/2 - 2;
+  const x = cx - pw/2, yy = cy - ph/2;
+  ctx.beginPath();
+  ctx.moveTo(x+r,yy); ctx.lineTo(x+pw-r,yy); ctx.quadraticCurveTo(x+pw,yy,x+pw,yy+r);
+  ctx.lineTo(x+pw,yy+ph-r); ctx.quadraticCurveTo(x+pw,yy+ph,x+pw-r,yy+ph);
+  ctx.lineTo(x+r,yy+ph); ctx.quadraticCurveTo(x,yy+ph,x,yy+ph-r);
+  ctx.lineTo(x,yy+r); ctx.quadraticCurveTo(x,yy,x+r,yy); ctx.closePath();
+  ctx.fillStyle = pillBg; ctx.fill();
+  ctx.strokeStyle = pillStroke; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = textColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, cx, cy + 0.5);
+  ctx.restore();
+}
+
+function barPillPlugin(actualData, planData, fmtFn) {
   return {
     id: 'barpills_' + Math.random(),
     afterDatasetsDraw(chart) {
-      const { ctx } = chart;
-      const yScale = chart.scales.y;
-      const chartArea = chart.chartArea;
+      const { ctx, chartArea: ca, scales: { y } } = chart;
       const barMeta = chart.getDatasetMeta(0);
       const lineMeta = chart.getDatasetMeta(1);
+      const placed = [];
       barMeta.data.forEach((bar, i) => {
         const val = actualData[i];
         if (val === null || val === undefined) return;
-        const barBottom = yScale.getPixelForValue(0);
-        const text = '$' + val.toFixed(2) + (val < 1 ? 'M' : 'M');
-        drawPill(ctx, text, bar.x, barBottom - 11, '#222', '#fff');
+        const text = fmtFn(val);
+        const barTop = y.getPixelForValue(val);
+        let cy = barTop - 12;
+        if (cy - 8 < ca.top) cy = barTop + 14;
+        placed.push({ cx: bar.x, cy });
+        drawPillFixed(ctx, text, bar.x, cy, '#1a1a1a', '#1a1a1a', '#ffffff', ca);
       });
-      const placed = [];
       lineMeta.data.forEach((point, i) => {
         const val = planData[i];
         if (val === null || val === undefined) return;
-        const text = '$' + val.toFixed(2) + 'M';
-        ctx.font = '600 9px sans-serif';
-        const tw = ctx.measureText(text).width + 10;
-        let cy = point.y - 16;
-        for (const p of placed) { if (Math.abs(p.cx - point.x) < tw + 2 && Math.abs(cy - p.cy) < 15) cy = p.cy - 17; }
-        if (cy < chartArea.top + 8) cy = point.y + 16;
+        const text = fmtFn(val);
+        ctx.font = 'bold 9px Arial, sans-serif';
+        const pw = ctx.measureText(text).width + 12;
+        let cy = point.y - 14;
+        for (const p of placed) { if (Math.abs(p.cx - point.x) < pw && Math.abs(cy - p.cy) < 16) cy = p.cy - 17; }
+        if (cy - 8 < ca.top) cy = point.y + 14;
         placed.push({ cx: point.x, cy });
-        drawPill(ctx, text, point.x, cy, '#4a90d9', '#2a70c9');
+        drawPillFixed(ctx, text, point.x, cy, '#ffffff', '#4a90d9', '#1a5fa8', ca);
       });
     }
   };
@@ -483,7 +505,7 @@ async function loadAllData() {
           { type:'line', label:'Forecast', data:lcPlan, borderColor:'#4a90d9', borderWidth:2, borderDash:[6,5], pointRadius:lcPlan.map((_,i)=>lcActual26[i]!==null?5:4), pointBackgroundColor:lcPlan.map((_,i)=>lcActual26[i]!==null?'#fff':'#4a90d9'), pointBorderColor:'#4a90d9', pointBorderWidth:2, tension:0.4, spanGaps:true, fill:false, order:1 }
         ]},
         options: { responsive:true, maintainAspectRatio:false, layout:{padding:{top:35,left:4,right:4,bottom:4}}, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:9},color:'#999'},border:{color:'#e5e5e0'}}, y:{min:0,max:2.0,grid:{color:'rgba(0,0,0,0.05)'},ticks:{stepSize:0.2,callback:v=>'$'+v.toFixed(1)+'M',font:{size:9},color:'#999'},border:{color:'#e5e5e0'}} } },
-        plugins: [barPillPlugin(lcActual26, lcPlan)]
+        plugins: [barPillPlugin(lcActual26, lcPlan, v => '$' + v.toFixed(2) + 'M')]
       });
 
       new Chart('ipMrrChart', {
@@ -492,11 +514,7 @@ async function loadAllData() {
           { type:'line', label:'Forecast', data:ipPlan, borderColor:'#4a90d9', borderWidth:2, borderDash:[6,5], pointRadius:ipPlan.map((_,i)=>ipActual26[i]!==null?5:4), pointBackgroundColor:ipPlan.map((_,i)=>ipActual26[i]!==null?'#fff':'#4a90d9'), pointBorderColor:'#4a90d9', pointBorderWidth:2, tension:0.4, spanGaps:true, fill:false, order:1 }
         ]},
         options: { responsive:true, maintainAspectRatio:false, layout:{padding:{top:35,left:4,right:4,bottom:4}}, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:9},color:'#999'},border:{color:'#e5e5e0'}}, y:{min:0,max:120,grid:{color:'rgba(0,0,0,0.05)'},ticks:{stepSize:20,callback:v=>'$'+v+'K',font:{size:9},color:'#999'},border:{color:'#e5e5e0'}} } },
-        plugins:[{ id:'ipPills', afterDatasetsDraw(chart){
-          const {ctx}=chart; const yS=chart.scales.y; const bm=chart.getDatasetMeta(0); const lm=chart.getDatasetMeta(1); const ca=chart.chartArea; const placed=[];
-          bm.data.forEach((bar,i)=>{ const v=ipActual26[i]; if(v===null||v===undefined)return; drawPill(ctx,'$'+v.toFixed(2)+'K',bar.x,yS.getPixelForValue(0)-11,'#222','#fff'); });
-          lm.data.forEach((pt,i)=>{ const v=ipPlan[i]; if(v===null||v===undefined)return; const t='$'+v.toFixed(2)+'K'; ctx.font='600 9px sans-serif'; const pw=ctx.measureText(t).width+10; let cy=pt.y-16; for(const p of placed){if(Math.abs(p.cx-pt.x)<pw+2&&Math.abs(cy-p.cy)<15)cy=p.cy-17;} if(cy<ca.top+8)cy=pt.y+16; placed.push({cx:pt.x,cy}); drawPill(ctx,t,pt.x,cy,'#4a90d9','#2a70c9'); });
-        }}]
+        plugins:[barPillPlugin(ipActual26, ipPlan, v => '$' + v.toFixed(2) + 'K')]
       });
 
       // ── ARPA ──
