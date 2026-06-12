@@ -51,6 +51,13 @@
   .sc-sub { font-size: 11px; color: #999; margin-top: 2px; }
   .chart-wrap { position: relative; height: 300px; }
 
+  /* Chart action buttons */
+  .chart-actions { display: flex; gap: 6px; margin-top: 10px; justify-content: flex-end; }
+  .chart-btn { display: flex; align-items: center; gap: 4px; background: #f5f5f0; border: 1px solid #e0e0db; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 500; color: #555; cursor: pointer; transition: all 0.15s; }
+  .chart-btn:hover { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
+  .chart-btn.copied { background: #2d6a2d; color: #fff; border-color: #2d6a2d; }
+  .cohort-actions { display: flex; gap: 6px; margin-top: 12px; justify-content: flex-end; }
+
   /* Cohort table */
   .cohort-wrap { background: #fff; border-radius: 14px; border: 1px solid #e5e5e0; padding: 20px 22px; margin-bottom: 16px; }
   .cohort-table { border-collapse: separate; border-spacing: 3px; width: 100%; table-layout: fixed; }
@@ -354,6 +361,14 @@ async function loadAllData() {
       const wowPeakWeek = wowLabels[wowSent.indexOf(wowPeak)];
       const wow12avg = (wowSent.slice(-12).reduce((a,b)=>a+(b||0),0)/Math.min(12,wowSent.length)).toFixed(1);
 
+      // Helper: action buttons for every chart
+      function btns(canvasId, filename) {
+        return `<div class="chart-actions">
+          <button class="chart-btn" onclick="copyChart('${canvasId}', this)" title="Copy to clipboard">📋 Copy</button>
+          <button class="chart-btn" onclick="downloadChart('${canvasId}', '${filename}')" title="Download PNG">⬇ Download</button>
+        </div>`;
+      }
+
       return `
       <!-- WoW KPIs -->
       <div class="section-title">📅 Week-over-Week (Latest: ${latestWeek})</div>
@@ -369,11 +384,13 @@ async function loadAllData() {
           <div class="chart-title">Emails Sent — WoW Trend</div>
           <div class="chart-subtitle">Weekly volume (M) · ${wowLabels[0]} – ${wowLabels[wowLabels.length-1]}</div>
           <div class="chart-wrap"><canvas id="wowSentChart"></canvas></div>
+          ${btns('wowSentChart','emails-sent-wow')}
         </div>
         <div class="chart-card">
           <div class="chart-title">Delivered % — WoW Trend</div>
           <div class="chart-subtitle">Weekly delivery rate · ${wowLabels[0]} – ${wowLabels[wowLabels.length-1]}</div>
           <div class="chart-wrap"><canvas id="wowDelChart"></canvas></div>
+          ${btns('wowDelChart','delivered-pct-wow')}
         </div>
       </div>
 
@@ -383,11 +400,13 @@ async function loadAllData() {
           <div class="chart-title">Opened % — WoW Trend</div>
           <div class="chart-subtitle">Weekly open rate · ${wowLabels[0]} – ${wowLabels[wowLabels.length-1]}</div>
           <div class="chart-wrap"><canvas id="wowOpenChart"></canvas></div>
+          ${btns('wowOpenChart','opened-pct-wow')}
         </div>
         <div class="chart-card">
           <div class="chart-title">Click % — WoW Trend</div>
           <div class="chart-subtitle">Weekly CTR · ${wowLabels[0]} – ${wowLabels[wowLabels.length-1]}</div>
           <div class="chart-wrap"><canvas id="wowCtrChart"></canvas></div>
+          ${btns('wowCtrChart','ctr-pct-wow')}
         </div>
       </div>
 
@@ -397,6 +416,7 @@ async function loadAllData() {
           <div class="chart-title">Support Tickets — WoW Trend</div>
           <div class="chart-subtitle">Weekly ticket count · ${wowLabels[0]} – ${wowLabels[wowLabels.length-1]}</div>
           <div class="chart-wrap"><canvas id="wowTicketsChart"></canvas></div>
+          ${btns('wowTicketsChart','support-tickets-wow')}
         </div>
       </div>
 
@@ -408,12 +428,14 @@ async function loadAllData() {
           <div class="chart-title">Emails Sent — YoY Trend</div>
           <div class="chart-subtitle">Monthly volume (M)</div>
           <div class="chart-wrap"><canvas id="momSentChart"></canvas></div>
+          ${btns('momSentChart','emails-sent-yoy')}
         </div>
         <div class="chart-card">
           <div class="legend-row"><span><span class="legend-dot" style="background:#4a90d9"></span>2025</span><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
           <div class="chart-title">Delivered % — YoY Trend</div>
           <div class="chart-subtitle">Monthly delivery rate</div>
           <div class="chart-wrap"><canvas id="momDelChart"></canvas></div>
+          ${btns('momDelChart','delivered-pct-yoy')}
         </div>
       </div>
       <div class="chart-grid-2">
@@ -422,12 +444,14 @@ async function loadAllData() {
           <div class="chart-title">Opened % — YoY Trend</div>
           <div class="chart-subtitle">Monthly open rate</div>
           <div class="chart-wrap"><canvas id="momOpenChart"></canvas></div>
+          ${btns('momOpenChart','opened-pct-yoy')}
         </div>
         <div class="chart-card">
           <div class="legend-row"><span><span class="legend-dot" style="background:#4a90d9"></span>2025</span><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
           <div class="chart-title">Click % — YoY Trend</div>
           <div class="chart-subtitle">Monthly CTR</div>
           <div class="chart-wrap"><canvas id="momCtrChart"></canvas></div>
+          ${btns('momCtrChart','ctr-pct-yoy')}
         </div>
       </div>
 
@@ -442,6 +466,7 @@ async function loadAllData() {
             <div class="summary-card forecast-border"><div class="sc-label">Forecasted Dec-26</div><div class="sc-value">$1.48M</div></div>
           </div>
           <div class="chart-wrap"><canvas id="lcMrrChart"></canvas></div>
+          ${btns('lcMrrChart','lc-email-mrr')}
         </div>
         <div class="chart-card">
           <div class="chart-title">IP Reselling — Actual vs. Forecasted MRR</div>
@@ -451,16 +476,18 @@ async function loadAllData() {
             <div class="summary-card forecast-border"><div class="sc-label">Forecasted Dec-26</div><div class="sc-value">$100.70K</div></div>
           </div>
           <div class="chart-wrap"><canvas id="ipMrrChart"></canvas></div>
+          ${btns('ipMrrChart','ip-reselling-mrr')}
         </div>
       </div>
 
-      <!-- ARPA removed — now in Locations section -->
+      <!-- Support Tickets -->
       <div class="chart-grid-1">
         <div class="chart-card">
           <div class="legend-row"><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
           <div class="chart-title">Support Tickets — YoY Trend</div>
           <div class="chart-subtitle">Monthly ticket count</div>
           <div class="chart-wrap"><canvas id="momTicketsChart"></canvas></div>
+          ${btns('momTicketsChart','support-tickets-yoy')}
         </div>
       </div>
 
@@ -471,12 +498,14 @@ async function loadAllData() {
           <div class="chart-title">Email System Churn (%) — MoM Trend</div>
           <div class="chart-subtitle">Monthly churn rate · Oct 2025 – May 2026</div>
           <div class="chart-wrap"><canvas id="churnPctChart"></canvas></div>
+          ${btns('churnPctChart','churn-pct-mom')}
         </div>
         <div class="chart-card">
           <div class="legend-row"><span><span class="legend-dot" style="background:#4a90d9"></span>2025</span><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
           <div class="chart-title">Email Churn Agencies — Moved out of LC</div>
           <div class="chart-subtitle">Companies churned per month · Jan 2025 – May 2026</div>
           <div class="chart-wrap"><canvas id="churnAgenciesChart"></canvas></div>
+          ${btns('churnAgenciesChart','churn-agencies-yoy')}
         </div>
       </div>
 
@@ -488,12 +517,14 @@ async function loadAllData() {
           <div class="chart-title">New Locations Activated — YoY Trend</div>
           <div class="chart-subtitle">Monthly new locations · 2025 vs 2026</div>
           <div class="chart-wrap"><canvas id="newLocChart"></canvas></div>
+          ${btns('newLocChart','new-locations-yoy')}
         </div>
         <div class="chart-card">
           <div class="legend-row"><span><span class="legend-dot" style="background:#4a90d9"></span>2025</span><span><span class="legend-dot" style="background:#e05a5a"></span>2026</span></div>
           <div class="chart-title">Email ARPA — MoM YoY</div>
           <div class="chart-subtitle">Average Revenue per Agency ($)</div>
           <div class="chart-wrap"><canvas id="arpaChart"></canvas></div>
+          ${btns('arpaChart','arpa-yoy')}
         </div>
       </div>
 
@@ -512,6 +543,10 @@ async function loadAllData() {
           <div class="cs-card"><div class="cs-lbl">Peak activation (M11)</div><div class="cs-val">${cMax.toFixed(2)}%</div><div class="cs-sub">Jul 2025 cohort</div></div>
           <div class="cs-card"><div class="cs-lbl">Total agencies (all cohorts)</div><div class="cs-val">316.1K</div><div class="cs-sub">Jul 2025 – Jun 2026</div></div>
         </div>
+        <div class="cohort-actions">
+          <button class="chart-btn" onclick="copyCohort('cohortTable', this)">📋 Copy</button>
+          <button class="chart-btn" onclick="downloadCohort('cohortTable', 'agency-cohort')">⬇ Download</button>
+        </div>
       </div>
 
       <!-- New Locations Cohort -->
@@ -528,8 +563,13 @@ async function loadAllData() {
           <div class="cs-card"><div class="cs-lbl">Peak activation (M11)</div><div class="cs-val">36.51%</div><div class="cs-sub">Jul 2025 cohort</div></div>
           <div class="cs-card"><div class="cs-lbl">Total locations (all cohorts)</div><div class="cs-val">1.92M</div><div class="cs-sub">Jul 2025 – Jun 2026</div></div>
         </div>
+        <div class="cohort-actions">
+          <button class="chart-btn" onclick="copyCohort('locCohortTable', this)">📋 Copy</button>
+          <button class="chart-btn" onclick="downloadCohort('locCohortTable', 'location-cohort')">⬇ Download</button>
+        </div>
       </div>
       `;
+    }
     }
 
     function renderAllCharts() {
@@ -650,8 +690,227 @@ async function loadAllData() {
   }
 }
 
+// ─────────────────────────────────────────────────────────
+// COPY & DOWNLOAD FUNCTIONS
+// ─────────────────────────────────────────────────────────
+function getChartCanvas(canvasId) {
+  // Create a temp canvas with white background for clean export
+  const src = document.getElementById(canvasId);
+  const tmp = document.createElement('canvas');
+  tmp.width = src.width; tmp.height = src.height;
+  const ctx = tmp.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, tmp.width, tmp.height);
+  ctx.drawImage(src, 0, 0);
+  return tmp;
+}
+
+function downloadChart(canvasId, filename) {
+  const canvas = getChartCanvas(canvasId);
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = filename + '.png';
+  a.click();
+}
+
+async function copyChart(canvasId, btn) {
+  try {
+    const canvas = getChartCanvas(canvasId);
+    canvas.toBlob(async blob => {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
+    });
+  } catch(e) {
+    alert('Copy failed — try Download instead.\n' + e.message);
+  }
+}
+
+function downloadCohort(tableId, filename) {
+  const table = document.getElementById(tableId);
+  const tmp = document.createElement('canvas');
+  const rect = table.getBoundingClientRect();
+  const scale = 2; // retina quality
+  tmp.width = rect.width * scale;
+  tmp.height = rect.height * scale;
+  const ctx = tmp.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, rect.width, rect.height);
+
+  // Use html2canvas approach via foreignObject SVG
+  const data = '<svg xmlns="http://www.w3.org/2000/svg" width="' + rect.width + '" height="' + rect.height + '">' +
+    '<foreignObject width="100%" height="100%">' +
+    '<div xmlns="http://www.w3.org/1999/xhtml">' + table.outerHTML + '</div>' +
+    '</foreignObject></svg>';
+  const img = new Image();
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0);
+    const a = document.createElement('a');
+    a.href = tmp.toDataURL('image/png');
+    a.download = filename + '.png';
+    a.click();
+  };
+  img.src = url;
+}
+
+async function copyCohort(tableId, btn) {
+  // For cohort tables, capture the whole cohort-wrap div
+  const table = document.getElementById(tableId);
+  const wrap = table.closest('.cohort-wrap');
+  const rect = wrap.getBoundingClientRect();
+  const scale = 2;
+  const tmp = document.createElement('canvas');
+  tmp.width = rect.width * scale;
+  tmp.height = rect.height * scale;
+  const ctx = tmp.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, rect.width, rect.height);
+
+  const data = '<svg xmlns="http://www.w3.org/2000/svg" width="' + rect.width + '" height="' + rect.height + '">' +
+    '<foreignObject width="100%" height="100%">' +
+    '<div xmlns="http://www.w3.org/1999/xhtml">' + wrap.innerHTML + '</div>' +
+    '</foreignObject></svg>';
+  const img = new Image();
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0);
+    tmp.toBlob(async blob => {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
+      } catch(e) { alert('Copy failed — try Download instead.'); }
+    });
+  };
+  img.src = url;
+}
+
 // Auto-load on page open
 loadAllData();
+
+// ─────────────────────────────────────────────────────────
+// CHART EXPORT: Copy to Clipboard & Download PNG
+// ─────────────────────────────────────────────────────────
+
+// Download chart canvas as PNG
+function downloadChart(canvasId, filename) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) { alert('Chart not found'); return; }
+
+  // Create a white-background version
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  const ctx = exportCanvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+  ctx.drawImage(canvas, 0, 0);
+
+  const link = document.createElement('a');
+  link.download = (filename || canvasId) + '.png';
+  link.href = exportCanvas.toDataURL('image/png');
+  link.click();
+}
+
+// Copy chart canvas to clipboard as PNG
+async function copyChart(canvasId, btnEl) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) { alert('Chart not found'); return; }
+
+  try {
+    // White background export
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = canvas.width;
+    exportCanvas.height = canvas.height;
+    const ctx = exportCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+    ctx.drawImage(canvas, 0, 0);
+
+    exportCanvas.toBlob(async (blob) => {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+        // Show copied feedback
+        btnEl.textContent = '✅ Copied!';
+        btnEl.classList.add('copied');
+        setTimeout(() => {
+          btnEl.textContent = '📋 Copy';
+          btnEl.classList.remove('copied');
+        }, 2000);
+      } catch (err) {
+        // Fallback: download instead
+        alert('Clipboard not supported in this browser. Downloading instead...');
+        downloadChart(canvasId, canvasId);
+      }
+    }, 'image/png');
+  } catch (e) {
+    alert('Could not copy: ' + e.message);
+  }
+}
+
+// Download cohort table as PNG using html2canvas
+async function downloadCohort(tableId, filename) {
+  const el = document.getElementById(tableId)?.closest('.cohort-wrap');
+  if (!el) { alert('Cohort table not found'); return; }
+
+  // Use html2canvas if available, else alert
+  if (typeof html2canvas === 'undefined') {
+    alert('Loading export library...');
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.onload = () => exportElement(el, filename);
+    document.head.appendChild(script);
+  } else {
+    exportElement(el, filename);
+  }
+}
+
+async function copyCohort(tableId, btnEl) {
+  const el = document.getElementById(tableId)?.closest('.cohort-wrap');
+  if (!el) { alert('Cohort table not found'); return; }
+
+  if (typeof html2canvas === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.onload = () => exportElementToClipboard(el, btnEl);
+    document.head.appendChild(script);
+  } else {
+    exportElementToClipboard(el, btnEl);
+  }
+}
+
+function exportElement(el, filename) {
+  html2canvas(el, { backgroundColor: '#ffffff', scale: 2 }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = (filename || 'cohort') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+function exportElementToClipboard(el, btnEl) {
+  html2canvas(el, { backgroundColor: '#ffffff', scale: 2 }).then(canvas => {
+    canvas.toBlob(async blob => {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        btnEl.textContent = '✅ Copied!';
+        btnEl.classList.add('copied');
+        setTimeout(() => { btnEl.textContent = '📋 Copy'; btnEl.classList.remove('copied'); }, 2000);
+      } catch(e) {
+        exportElement(el, 'cohort');
+      }
+    }, 'image/png');
+  });
+}
 </script>
 </body>
 </html>
